@@ -69,7 +69,7 @@ public class BookController {
         if (book == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Failed to update book");
         }
-        return ResponseEntity.status(HttpStatus.OK).body("Updated book");
+        return ResponseEntity.status(HttpStatus.OK).body(book);
     }
 
     @DeleteMapping("/{isbn}")

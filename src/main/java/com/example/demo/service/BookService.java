@@ -32,7 +32,7 @@ public class BookService implements IBookService {
 
     @Override
     public List<Book> getAllBooks() {
-        List<Book> books = (List) bookRepository.findAll();
+        List<Book> books = (List<Book>) bookRepository.findAll();
 
         for (Book book : books) {
             addAuthorNamesToBook(book);
@@ -86,8 +86,13 @@ public class BookService implements IBookService {
         if (authorNames.isEmpty()) return null;
 
         // Save book
-        // TODO: handle malformed input
-        Book book = new Book(bookRequest);
+        Book book;
+        try {
+            book = new Book(bookRequest);
+        } catch (Exception e) {
+            System.out.println(e);
+            return null;
+        }
         book = bookRepository.save(book);
 
         // Save new authors
@@ -115,10 +120,74 @@ public class BookService implements IBookService {
         return addAuthorNamesToBook(book);
     }
 
-    // TODO: implement method
     @Override
     public Book updateBook(String isbn, Map<String, Object> bookRequest) {
-        return null;
+        // Current ISBN must already exist
+        Optional<Book> oldBook = bookRepository.findBookByIsbn(isbn);
+        if (oldBook.isEmpty()) return null;
+
+        // If ISBN is being changed, check that new ISBN is unique
+        if (!bookRequest.get("isbn").equals(isbn) && bookRepository.existsByIsbn(isbn)) return null;
+
+        List<String> authorNames = (ArrayList<String>) bookRequest.get("authors");
+        // Must have at least one author
+        if (authorNames.isEmpty()) return null;
+
+        // Save updated details to existing book's id
+        Book newBook;
+        try {
+            newBook = new Book(bookRequest);
+        } catch (Exception e) {
+            System.out.println(e);
+            return null;
+        }
+        newBook.setId(oldBook.get().getId());
+        bookRepository.save(newBook);
+
+        // Delete author-book pairs for removed authors
+        List<AuthorBook> oldAuthorBooks =
+                authorBookRepository.findAuthorBooksByBookId(oldBook.get().getId());
+        List<Author> oldAuthors =
+                authorRepository.findAuthorsByIdIn(
+                        oldAuthorBooks.stream().map(AuthorBook::getAuthorId).toList());
+        List<Long> authorIdsToRemove =
+                oldAuthors.stream()
+                        .filter(author -> !authorNames.contains(author.getName()))
+                        .map(Author::getId)
+                        .toList();
+        List<Long> authorBookIdsToRemove =
+                oldAuthorBooks.stream()
+                        .filter(authorBook -> authorIdsToRemove.contains(authorBook.getAuthorId()))
+                        .map(AuthorBook::getId)
+                        .toList();
+        authorBookRepository.deleteAllById(authorBookIdsToRemove);
+
+        // Save new authors
+        List<Author> authors = authorRepository.findAuthorsByNameIn(authorNames);
+        List<String> newAuthorNames =
+                authorNames.stream()
+                        .filter(
+                                authorName ->
+                                        !authors.stream()
+                                                .map(Author::getName)
+                                                .toList()
+                                                .contains(authorName))
+                        .toList();
+        List<Author> newAuthors = newAuthorNames.stream().map(Author::new).toList();
+        for (Author author : authorRepository.saveAll(newAuthors)) {
+            authors.add(author);
+        }
+
+        // Save new author-book pairs
+        Long bookId = newBook.getId();
+        List<AuthorBook> authorBooks =
+                authors.stream()
+                        .filter(author -> !authorIdsToRemove.contains(author.getId()))
+                        .map(author -> new AuthorBook(author.getId(), bookId))
+                        .toList();
+        authorBookRepository.saveAll(authorBooks);
+
+        return addAuthorNamesToBook(newBook);
     }
 
     @Override

@@ -4,17 +4,15 @@ package com.example.demo.model;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.*;
-import org.springframework.lang.NonNull;
 
 @Entity
 public class Book {
     @Id @GeneratedValue private Long id;
-    @NonNull private String isbn;
-    @NonNull private String title;
-    @NonNull private Integer publishYear;
-
-    @NonNull private Double price;
-    @NonNull private String genre;
+    private String isbn;
+    private String title;
+    private Integer publishYear;
+    private Double price;
+    private String genre;
     @Transient private List<String> authorNames;
 
     public List<String> getAuthorNames() {
@@ -76,11 +74,15 @@ public class Book {
     public Book() {}
 
     public Book(Map<String, Object> bookRequest) {
-        this.isbn = bookRequest.get("isbn").toString();
-        this.title = bookRequest.get("title").toString();
-        this.publishYear = Integer.parseInt(bookRequest.get("publishYear").toString());
-        this.price = Double.parseDouble(bookRequest.get("price").toString());
-        this.genre = bookRequest.get("genre").toString();
+        if (isValidBookRequest(bookRequest)) {
+            this.isbn = bookRequest.get("isbn").toString();
+            this.title = bookRequest.get("title").toString();
+            this.publishYear = Integer.parseInt(bookRequest.get("publishYear").toString());
+            this.price = Double.parseDouble(bookRequest.get("price").toString());
+            this.genre = bookRequest.get("genre").toString();
+        } else {
+            throw new IllegalArgumentException("Missing one or more fields");
+        }
     }
 
     public Book(String isbn, String title, Integer publishYear, Double price, String genre) {
@@ -110,5 +112,12 @@ public class Book {
                 + genre
                 + '\''
                 + '}';
+    }
+
+    private boolean isValidBookRequest(Map<String, Object> bookRequest) {
+        for (String field : new String[] {"isbn", "title", "publishYear", "price", "genre"}) {
+            if (bookRequest.get(field) == null) return false;
+        }
+        return true;
     }
 }

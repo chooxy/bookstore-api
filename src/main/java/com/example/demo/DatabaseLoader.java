@@ -35,8 +35,12 @@ public class DatabaseLoader implements CommandLineRunner {
                 this.bookRepository.save(
                         new Book("1234567890123", "First Book", 2020, 19.99, "History"));
 
-        AuthorBook authorBook =
+        AuthorBook savedAuthorBook =
                 this.authorBookRepository.save(
                         new AuthorBook(savedAuthor.getId(), savedBook.getId()));
+
+        System.out.println("Saved author: " + savedAuthor);
+        System.out.println("Saved book: " + savedBook);
+        System.out.println("Saved authorBook: " + savedAuthorBook);
     }
 }

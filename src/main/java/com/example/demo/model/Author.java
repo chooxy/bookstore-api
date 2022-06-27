@@ -1,6 +1,7 @@
 /* (C)2022 */
 package com.example.demo.model;
 
+import java.util.Map;
 import javax.persistence.*;
 
 @Entity
@@ -13,6 +14,15 @@ public class Author {
 
     public Author(String name) {
         this.name = name;
+    }
+
+    public Author(Map<String, Object> authorRequest) {
+        if (isValidAuthorRequest(authorRequest)) {
+            this.name = authorRequest.get("name").toString();
+            this.birthday = authorRequest.get("birthday").toString();
+        } else {
+            throw new IllegalArgumentException("Missing one or more fields");
+        }
     }
 
     @Override
@@ -56,5 +66,12 @@ public class Author {
     public Author(String name, String birthday) {
         this.name = name;
         this.birthday = birthday;
+    }
+
+    private boolean isValidAuthorRequest(Map<String, Object> authorRequest) {
+        for (String field : new String[] {"name", "birthday"}) {
+            if (authorRequest.get(field) == null) return false;
+        }
+        return true;
     }
 }
